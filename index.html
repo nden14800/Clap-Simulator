@@ -3,44 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clap Simulator 2025</title>
-    <!-- Google Fonts: 丸みのあるフォント -->
+    <title>Clap Simulator Ultimate</title>
+    <!-- Google Fonts: M PLUS Rounded 1c -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
         :root {
-            /* ライトモード（デフォルト） */
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
+            --font-family: 'M PLUS Rounded 1c', sans-serif;
+            
+            /* ライトモード */
+            --bg-color: #e6e9f0;
+            --panel-bg: #ffffff;
             --text-main: #2d3436;
             --text-sub: #636e72;
-            --accent-color: #ff7675;
-            --accent-hover: #d63031;
-            --shadow: 0 4px 15px rgba(0,0,0,0.1);
-            --font-family: 'M PLUS Rounded 1c', sans-serif;
-            --btn-gradient: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+            --primary: #0984e3;
+            --accent: #e84393;
+            --score-color: #00b894;
+            --shadow: 0 8px 20px rgba(0,0,0,0.08);
+            --border: 1px solid rgba(0,0,0,0.05);
+            --btn-gradient: linear-gradient(135deg, #74b9ff, #0984e3);
+            --bar-bg: #dfe6e9;
+            --highlight: rgba(9, 132, 227, 0.1);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
                 /* ダークモード */
                 --bg-color: #1e1e2e;
-                --card-bg: #2d2d44;
+                --panel-bg: #2b2b40;
                 --text-main: #dfe6e9;
-                --text-sub: #b2bec3;
-                --accent-color: #ff7675;
-                --accent-hover: #ff4757;
-                --shadow: 0 4px 20px rgba(0,0,0,0.4);
-                --btn-gradient: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%);
+                --text-sub: #a4b0be;
+                --primary: #00d2d3;
+                --accent: #ff6b6b;
+                --score-color: #feca57;
+                --shadow: 0 8px 30px rgba(0,0,0,0.4);
+                --border: 1px solid rgba(255,255,255,0.05);
+                --btn-gradient: linear-gradient(135deg, #ff6b6b, #ee5253);
+                --bar-bg: #444;
+                --highlight: rgba(0, 210, 211, 0.15);
             }
         }
 
         * {
             box-sizing: border-box;
-            user-select: none; /* ゲーム連打時の選択防止 */
+            user-select: none;
             -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -49,576 +61,639 @@
             font-family: var(--font-family);
             background-color: var(--bg-color);
             color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            transition: background-color 0.3s, color 0.3s;
-            overflow: hidden; /* エフェクトのはみ出し防止 */
+            flex-direction: column;
         }
 
-        .game-container {
+        /* コンボタイマーバー (最上部固定) */
+        .timer-container {
             width: 100%;
-            max-width: 500px;
-            padding: 20px;
+            height: 12px;
+            background: var(--bg-color);
+            padding: 2px 10px;
+            z-index: 1000;
+            flex-shrink: 0;
+        }
+        .timer-bar-bg {
+            width: 100%;
+            height: 100%;
+            background: var(--bar-bg);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        .timer-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 6px;
+            transition: width 0.1s linear; /* JSで制御するため短めに */
+        }
+
+        /* レイアウト */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 左パネル */
+        .game-section {
+            flex: 1;
+            padding: 20px 30px;
             display: flex;
             flex-direction: column;
             gap: 20px;
-        }
-
-        /* ヘッダー */
-        header h1 {
-            text-align: center;
-            font-weight: 900;
-            font-size: 2rem;
-            margin: 0 0 10px 0;
-            background: var(--btn-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        }
-
-        /* ステータスグリッド */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .stat-card {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            text-align: center;
-            transition: transform 0.1s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-sub);
-            font-weight: 700;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 900;
-        }
-
-        .stat-value.highlight {
-            color: var(--accent-color);
-        }
-
-        /* メインボタンエリア */
-        .click-area {
-            display: flex;
-            justify-content: center;
+            overflow-y: auto;
             align-items: center;
-            height: 200px;
+            border-right: var(--border);
+            min-width: 350px;
             position: relative;
         }
 
+        /* 右パネル */
+        .info-section {
+            flex: 1;
+            padding: 20px 30px;
+            background: rgba(0,0,0,0.02);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 320px;
+        }
+
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; overflow-y: auto; }
+            .game-section, .info-section { flex: none; width: 100%; border-right: none; height: auto; overflow-y: visible; }
+            body { overflow: auto; }
+            .timer-container { position: sticky; top: 0; }
+        }
+
+        /* パネル */
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: var(--border);
+            width: 100%;
+            max-width: 500px;
+        }
+        .panel-header {
+            font-size: 1rem;
+            font-weight: 900;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+        }
+
+        /* スコア */
+        .score-board { text-align: center; }
+        .score-label { font-size: 0.9rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .score-value { font-size: 3rem; font-weight: 900; color: var(--score-color); line-height: 1.1; margin: 5px 0; word-break: break-all; }
+        .multiplier-badge { display: inline-block; background: var(--text-main); color: var(--bg-color); padding: 4px 12px; border-radius: 12px; font-weight: 900; font-size: 0.9rem; }
+
+        /* ボタン */
+        .click-zone { height: 220px; display: flex; justify-content: center; align-items: center; width: 100%; position: relative; }
         #clap-btn {
-            width: 160px;
-            height: 160px;
+            width: 170px; height: 170px;
             border-radius: 50%;
             border: none;
             background: var(--btn-gradient);
             color: white;
-            font-family: var(--font-family);
-            font-size: 1.5rem;
-            font-weight: 900;
+            font-size: 4.5rem;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4);
-            transition: transform 0.05s, box-shadow 0.05s;
-            position: relative;
-            z-index: 10;
-            outline: none;
-            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2), inset 0 4px 10px rgba(255,255,255,0.4);
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.05s;
+            position: relative; z-index: 10; outline: none;
+        }
+        #clap-btn:active { transform: scale(0.92); }
+        #clap-btn.auto-mode { animation: pulse-ring 0.6s cubic-bezier(0.215, 0.61, 0.355, 1) infinite alternate; }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 15px var(--accent), 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            100% { box-shadow: 0 0 50px var(--accent), 0 0 0 30px rgba(255, 107, 107, 0); }
         }
 
-        #clap-btn:active {
-            transform: scale(0.92);
-            box-shadow: 0 5px 15px rgba(255, 118, 117, 0.3);
-        }
-
-        #clap-btn.auto-active {
-            animation: pulse 0.5s infinite alternate;
-        }
-
-        @keyframes pulse {
-            from { box-shadow: 0 0 10px var(--accent-color); }
-            to { box-shadow: 0 0 30px var(--accent-color); }
-        }
-
-        /* エフェクト用 */
+        /* パーティクル */
         .particle {
-            position: absolute;
-            pointer-events: none;
-            font-weight: bold;
-            color: var(--accent-color);
-            animation: floatUp 0.8s ease-out forwards;
-            font-size: 1.2rem;
-            z-index: 5;
+            position: absolute; font-weight: 900; font-size: 1.4rem; pointer-events: none; z-index: 5;
+            animation: float-up 0.5s ease-out forwards; white-space: nowrap; text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        @keyframes float-up {
+            0% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(-120px) scale(1.3) rotate(20deg); }
         }
 
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        /* 統計グリッド */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+        .stat-card { background: var(--panel-bg); padding: 12px; border-radius: 12px; box-shadow: var(--shadow); border: var(--border); text-align: center; }
+        .stat-title { font-size: 0.7rem; color: var(--text-sub); font-weight: 700; margin-bottom: 2px; }
+        .stat-num { font-size: 1.3rem; font-weight: 900; }
+        .text-accent { color: var(--accent); }
+        .text-primary { color: var(--primary); }
+
+        /* コントロール */
+        .controls { display: flex; flex-direction: column; gap: 15px; }
+        .control-row { display: flex; justify-content: space-between; align-items: center; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-switch {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .3s; border-radius: 34px;
+        }
+        .slider-switch:before {
+            position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider-switch { background-color: var(--accent); }
+        input:checked + .slider-switch:before { transform: translateX(22px); }
+        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin-top: 5px; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+            background: var(--primary); cursor: pointer; margin-top: -8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: var(--text-sub); border-radius: 2px; opacity: 0.3; }
+
+        /* テーブル */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .data-table th, .data-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(128,128,128,0.1); }
+        .data-table th { color: var(--text-sub); font-size: 0.75rem; text-transform: uppercase; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table .highlight-row { background-color: var(--highlight); color: var(--primary); font-weight: 700; }
+        .text-right { text-align: right; }
+        .prediction-val { font-weight: 700; font-feature-settings: "tnum"; }
+
+        /* FPSカウンター */
+        .fps-counter {
+            position: fixed; bottom: 10px; left: 10px;
+            font-size: 0.75rem; font-weight: 700; color: var(--text-sub);
+            opacity: 0.7; pointer-events: none; z-index: 2000;
         }
 
-        /* コントロールパネル */
-        .controls {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        /* コンボ背景 */
+        .combo-bg-text {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 20vw; font-weight: 900; color: var(--text-main); opacity: 0; pointer-events: none; z-index: 0;
+            white-space: nowrap; transition: opacity 0.1s;
         }
-
-        .control-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--accent-color);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-
-        /* スライダー */
-        .range-container {
-            width: 100%;
-        }
-        
-        .range-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-weight: 700;
-            color: var(--text-sub);
-        }
-
-        input[type="range"] {
-            width: 100%;
-            -webkit-appearance: none;
-            height: 8px;
-            background: #ddd;
-            border-radius: 5px;
-            outline: none;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            input[type="range"] {
-                background: #444;
-            }
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        /* コンボ表示 */
-        .combo-container {
-            text-align: center;
-            height: 30px;
-            font-size: 1.2rem;
-            font-weight: 900;
-            color: var(--accent-color);
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .combo-container.active {
-            opacity: 1;
-        }
-        .shake {
-            animation: shake 0.2s;
-        }
-
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
+        .combo-bg-text.active { opacity: 0.04; }
 
     </style>
 </head>
 <body>
 
-<div class="game-container">
-    <header>
-        <h1>CLAP SIMULATOR</h1>
-    </header>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Total Claps</div>
-            <div class="stat-value" id="total-claps">0</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Speed (CPS)</div>
-            <div class="stat-value" id="current-cps">0</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Max Speed</div>
-            <div class="stat-value" id="max-cps">0</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Combo</div>
-            <div class="stat-value highlight" id="combo-count">0</div>
-        </div>
+<!-- コンボタイマーバー (最上部) -->
+<div class="timer-container">
+    <div class="timer-bar-bg">
+        <div class="timer-bar-fill" id="combo-timer"></div>
     </div>
+</div>
 
-    <div class="combo-container" id="combo-text">COMBO!</div>
+<div class="fps-counter" id="fps-display">FPS: 0</div>
+<div class="combo-bg-text" id="bg-combo">0 COMBO</div>
 
-    <div class="click-area">
-        <button id="clap-btn">CLAP!</button>
-    </div>
-
-    <div class="controls">
-        <div class="control-row">
-            <span style="font-weight:bold;">AUTO CLAP</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="auto-toggle">
-                <span class="slider"></span>
-            </label>
+<div class="app-container">
+    <!-- 左: ゲーム -->
+    <div class="game-section">
+        <div class="panel score-board">
+            <div class="score-label"><i class="bi bi-trophy-fill"></i> Total Score</div>
+            <div class="score-value" id="score-display">0</div>
+            <div class="multiplier-badge" id="multiplier-badge">x1.0 BONUS</div>
         </div>
-        
-        <div class="range-container">
-            <div class="range-label">
-                <span>Speed</span>
-                <span id="slider-value">10 CPS</span>
+
+        <div class="click-zone">
+            <button id="clap-btn">
+                <i class="bi bi-hand-index-thumb-fill"></i>
+            </button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title"><i class="bi bi-hand-index"></i> CLAPS</div>
+                <div class="stat-num" id="total-claps">0</div>
             </div>
-            <input type="range" id="cps-slider" min="1" max="1000" value="10">
+            <div class="stat-card">
+                <div class="stat-title"><i class="bi bi-fire"></i> COMBO</div>
+                <div class="stat-num text-accent" id="combo-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i class="bi bi-speedometer"></i> CPS</div>
+                <div class="stat-num text-primary" id="current-cps">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i class="bi bi-lightning-charge-fill"></i> MAX</div>
+                <div class="stat-num text-primary" id="max-cps">0</div>
+            </div>
+        </div>
+
+        <div class="panel controls">
+            <div class="control-row">
+                <span style="font-weight:700;"><i class="bi bi-robot"></i> AUTO CLAP</span>
+                <label class="switch">
+                    <input type="checkbox" id="auto-toggle">
+                    <span class="slider-switch"></span>
+                </label>
+            </div>
+            <div style="width:100%;">
+                <div class="control-row" style="margin-bottom:5px;">
+                    <span style="font-size:0.8rem; font-weight:700; color:var(--text-sub);">SPEED</span>
+                    <span style="font-weight:900;" id="slider-value">10 CPS</span>
+                </div>
+                <input type="range" id="cps-slider" min="1" max="1000" value="10">
+            </div>
+        </div>
+    </div>
+
+    <!-- 右: データ -->
+    <div class="info-section">
+        <div class="panel">
+            <div class="panel-header"><i class="bi bi-stars"></i> BONUS MULTIPLIER</div>
+            <table class="data-table" id="bonus-table">
+                <thead>
+                    <tr><th>Combo Range</th><th class="text-right">Multiplier</th></tr>
+                </thead>
+                <tbody>
+                    <tr id="row-bonus-1"><td>0 - 50</td><td class="text-right">x1.0</td></tr>
+                    <tr id="row-bonus-2"><td>51 - 200</td><td class="text-right">x1.5</td></tr>
+                    <tr id="row-bonus-3"><td>201 - 500</td><td class="text-right">x2.0</td></tr>
+                    <tr id="row-bonus-4"><td>501 - 1,000</td><td class="text-right">x2.5</td></tr>
+                    <tr id="row-bonus-5"><td>1,001 - ∞</td><td class="text-right text-accent">x3.0</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <i class="bi bi-graph-up-arrow"></i> FUTURE GAIN
+                <span style="font-size:0.6rem; margin-left:auto; color:var(--text-sub); font-weight:400;">(Based on recent pace)</span>
+            </div>
+            <table class="data-table">
+                <thead><tr><th>Time</th><th class="text-right">Est. Score</th></tr></thead>
+                <tbody id="prediction-table-body"></tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
-    /**
-     * 状態管理
-     */
+    /*=============================================
+     * STATE
+     *=============================================*/
+    const COMBO_TIMEOUT = 3000; // 3秒
+
     const state = {
-        total: 0,
+        score: 0,
+        totalClaps: 0,
+        combo: 0,
         cps: 0,
         maxCps: 0,
-        combo: 0,
+        lastActiveCps: 0, // 計算用：0になる前の最後のCPSを保持
         lastClickTime: 0,
-        clicksInLastSecond: [],
+        clicksBuffer: [], 
+        
         autoEnabled: false,
         autoCps: 10,
-        audioContext: null,
+        
+        audioCtx: null,
         noiseBuffer: null
     };
 
-    /**
-     * DOM要素
-     */
-    const els = {
+    /*=============================================
+     * AUDIO (Real Clap)
+     *=============================================*/
+    function initAudio() {
+        if (!state.audioCtx) {
+            state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const bufferSize = state.audioCtx.sampleRate * 2;
+            const buffer = state.audioCtx.createBuffer(1, bufferSize, state.audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            state.noiseBuffer = buffer;
+        }
+        if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+    }
+
+    function playRealClap() {
+        if (!state.audioCtx) return;
+        const t = state.audioCtx.currentTime;
+        
+        const source = state.audioCtx.createBufferSource();
+        source.buffer = state.noiseBuffer;
+
+        const bandpass = state.audioCtx.createBiquadFilter();
+        bandpass.type = "bandpass";
+        bandpass.frequency.value = 800 + Math.random() * 400; 
+        bandpass.Q.value = 1.0; 
+
+        const highpass = state.audioCtx.createBiquadFilter();
+        highpass.type = "highpass";
+        highpass.frequency.value = 600;
+
+        const gainNode = state.audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0, t);
+        gainNode.gain.linearRampToValueAtTime(1.0, t + 0.001);
+        const decay = 0.05 + Math.random() * 0.05;
+        gainNode.gain.exponentialRampToValueAtTime(0.01, t + decay);
+
+        source.connect(bandpass);
+        bandpass.connect(highpass);
+        highpass.connect(gainNode);
+        gainNode.connect(state.audioCtx.destination);
+
+        source.start(t);
+        source.stop(t + decay + 0.05);
+    }
+
+    /*=============================================
+     * DOM ELEMENTS
+     *=============================================*/
+    const el = {
+        score: document.getElementById('score-display'),
+        multiplier: document.getElementById('multiplier-badge'),
         total: document.getElementById('total-claps'),
+        combo: document.getElementById('combo-count'),
         cps: document.getElementById('current-cps'),
         maxCps: document.getElementById('max-cps'),
-        combo: document.getElementById('combo-count'),
-        comboText: document.getElementById('combo-text'),
         btn: document.getElementById('clap-btn'),
         autoToggle: document.getElementById('auto-toggle'),
         slider: document.getElementById('cps-slider'),
-        sliderVal: document.getElementById('slider-value')
+        sliderVal: document.getElementById('slider-value'),
+        container: document.querySelector('.click-zone'),
+        bgCombo: document.getElementById('bg-combo'),
+        predictionBody: document.getElementById('prediction-table-body'),
+        timerBar: document.getElementById('combo-timer'),
+        fps: document.getElementById('fps-display'),
+        bonusRows: [
+            document.getElementById('row-bonus-1'),
+            document.getElementById('row-bonus-2'),
+            document.getElementById('row-bonus-3'),
+            document.getElementById('row-bonus-4'),
+            document.getElementById('row-bonus-5')
+        ]
     };
 
-    /**
-     * オーディオエンジン (Web Audio API)
-     * リアルな拍手音（ノイズバースト）を合成します。
-     * ファイルを読み込まないため、1000CPSでもレイテンシなしで発火します。
-     */
-    function initAudio() {
-        if (!state.audioContext) {
-            state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            // ノイズバッファを事前に生成（再利用して負荷を下げる）
-            const bufferSize = state.audioContext.sampleRate * 2; // 2秒分あれば十分
-            const buffer = state.audioContext.createBuffer(1, bufferSize, state.audioContext.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
-            state.noiseBuffer = buffer;
-        }
-        if (state.audioContext.state === 'suspended') {
-            state.audioContext.resume();
-        }
+    /*=============================================
+     * LOGIC
+     *=============================================*/
+    const BONUS_THRESHOLDS = [
+        { max: 50, val: 1.0 }, { max: 200, val: 1.5 }, { max: 500, val: 2.0 },
+        { max: 1000, val: 2.5 }, { max: Infinity, val: 3.0 }
+    ];
+
+    function getMultiplier(combo) {
+        if (combo <= 50) return 1.0;
+        if (combo <= 200) return 1.5;
+        if (combo <= 500) return 2.0;
+        if (combo <= 1000) return 2.5;
+        return 3.0;
     }
 
-    // 拍手音の再生（過負荷軽減なしの即時発火）
-    function playClapSound() {
-        if (!state.audioContext) return;
-
-        const t = state.audioContext.currentTime;
-        
-        // ソースノード作成（軽量）
-        const source = state.audioContext.createBufferSource();
-        source.buffer = state.noiseBuffer;
-
-        // フィルター（拍手のようなこもった音にする）
-        const filter = state.audioContext.createBiquadFilter();
-        filter.type = "bandpass";
-        filter.frequency.value = 800;
-        filter.Q.value = 1;
-
-        // 音量エンベロープ（アタックとディケイで「パンッ」という音を作る）
-        const gain = state.audioContext.createGain();
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.8, t + 0.001); // アタック
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1); // ディケイ
-
-        // 接続
-        source.connect(filter);
-        filter.connect(gain);
-        gain.connect(state.audioContext.destination);
-
-        // 再生（少しランダム性を持たせて機械的さを減らす）
-        source.playbackRate.value = 0.9 + Math.random() * 0.2;
-        source.start(t);
-        source.stop(t + 0.15); // クリーンアップ
+    function highlightBonusRow(combo) {
+        el.bonusRows.forEach(row => row.classList.remove('highlight-row'));
+        let idx = 0;
+        if (combo <= 50) idx = 0;
+        else if (combo <= 200) idx = 1;
+        else if (combo <= 500) idx = 2;
+        else if (combo <= 1000) idx = 3;
+        else idx = 4;
+        el.bonusRows[idx].classList.add('highlight-row');
     }
 
-    /**
-     * ゲームロジック
-     */
     function triggerClap(isAuto = false) {
-        // 初回クリック時にオーディオコンテキスト起動
-        if (!state.audioContext) initAudio();
-
+        if (!state.audioCtx) initAudio();
         const now = Date.now();
 
-        // 状態更新
-        state.total++;
-        state.clicksInLastSecond.push(now);
-        
-        // コンボ計算 (0.5秒以内の連打でコンボ継続)
-        if (now - state.lastClickTime < 500 || state.lastClickTime === 0) {
+        state.totalClaps++;
+        state.clicksBuffer.push(now);
+
+        // コンボ判定: 3秒以内
+        if (now - state.lastClickTime < COMBO_TIMEOUT || state.lastClickTime === 0) {
             state.combo++;
         } else {
             state.combo = 1;
         }
         state.lastClickTime = now;
 
-        // サウンド再生
-        playClapSound();
+        const base = 1111;
+        const mul = getMultiplier(state.combo);
+        const add = Math.floor(base * mul);
+        state.score += add;
 
-        // UI更新 (高負荷時は間引きたいところだが、要件によりすべて処理する努力をする)
-        // ただしDOM操作は重いので、requestAnimationFrameで同期させるのが定石だが、
-        // 1000CPSの「数字」を見るためにテキストは直接更新する。
-        els.total.textContent = state.total.toLocaleString();
-        els.combo.textContent = state.combo;
+        playRealClap();
+        highlightBonusRow(state.combo);
+        updateUI(mul, add);
         
-        // コンボ演出
-        if (state.combo > 5) {
-            els.comboText.classList.add('active');
-            els.combo.classList.remove('shake');
-            void els.combo.offsetWidth; // リフロー
-            els.combo.classList.add('shake');
+        // エフェクト生成: 自動モード時は間引く
+        spawnParticle(add, isAuto);
+
+        if (!isAuto) {
+            el.btn.style.transform = "scale(0.92)";
+            setTimeout(() => el.btn.style.transform = "scale(1)", 50);
+        }
+    }
+
+    function updateUI(mul, add) {
+        el.score.textContent = state.score.toLocaleString();
+        el.total.textContent = state.totalClaps.toLocaleString();
+        el.combo.textContent = state.combo.toLocaleString();
+        el.multiplier.textContent = `x${mul.toFixed(1)} BONUS`;
+
+        if (state.combo > 0 && state.combo % 25 === 0) {
+            el.bgCombo.textContent = `${state.combo} COMBO`;
+            el.bgCombo.classList.add('active');
+            setTimeout(() => el.bgCombo.classList.remove('active'), 150);
+        }
+    }
+
+    function spawnParticle(val, isAuto) {
+        // 自動モードの場合、90%の確率で生成をスキップ（軽量化）
+        if (isAuto && Math.random() > 0.1) return;
+
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.textContent = `+${val}`;
+        p.style.color = isAuto ? 'var(--primary)' : 'var(--accent)';
+        
+        const cx = el.container.offsetWidth / 2;
+        const cy = el.container.offsetHeight / 2;
+        const ox = (Math.random() - 0.5) * 100;
+        const oy = (Math.random() - 0.5) * 60;
+
+        p.style.left = `${cx + ox}px`;
+        p.style.top = `${cy + oy}px`;
+
+        el.container.appendChild(p);
+        setTimeout(() => p.remove(), 500);
+    }
+
+    /*=============================================
+     * PREDICTION & TIMERS
+     *=============================================*/
+    function calcFuture(sec, cps, currentCombo) {
+        if (cps <= 0) return 0;
+        let clicks = Math.floor(sec * cps);
+        let score = 0;
+        let cCombo = currentCombo;
+        let rem = clicks;
+        const base = 1111;
+
+        for (let t of BONUS_THRESHOLDS) {
+            if (t.max !== Infinity && cCombo > t.max) continue;
+            let zoneCap = (t.max === Infinity) ? rem : (t.max - cCombo);
+            let take = Math.min(rem, Math.max(0, zoneCap));
+            if (take <= 0) continue;
+            score += take * Math.floor(base * t.val);
+            rem -= take;
+            cCombo += take;
+            if (rem <= 0) break;
+        }
+        return score;
+    }
+
+    const TIMES = [
+        { l:'1s', s:1 }, { l:'5s', s:5 }, { l:'10s', s:10 }, { l:'30s', s:30 },
+        { l:'1m', s:60 }, { l:'5m', s:300 }, { l:'10m', s:600 }, { l:'30m', s:1800 },
+        { l:'1h', s:3600 }, { l:'3h', s:3600*3 }, { l:'6h', s:3600*6 }, { l:'12h', s:3600*12 },
+        { l:'1d', s:86400 }, { l:'3d', s:86400*3 }, { l:'7d', s:86400*7 }
+    ];
+
+    function updatePrediction() {
+        // 現在のCPSか、もし0なら直近の有効なCPSを使う（予測が消えないように）
+        let baseCps = state.cps > 0 ? state.cps : state.lastActiveCps;
+        
+        // 自動モードなら設定値を優先
+        if (state.autoEnabled) baseCps = state.autoCps;
+
+        let html = '';
+        TIMES.forEach(tm => {
+            const val = calcFuture(tm.s, baseCps, state.combo);
+            let displayVal = val.toLocaleString();
+            if (val > 1e15) displayVal = (val/1e15).toFixed(2) + "Q";
+            else if (val > 1e12) displayVal = (val/1e12).toFixed(2) + "T";
+            else if (val > 1e9) displayVal = (val/1e9).toFixed(2) + "B";
+            else if (val > 1e6) displayVal = (val/1e6).toFixed(2) + "M";
+
+            html += `<tr><td>${tm.l}</td><td class="text-right prediction-val">+${displayVal}</td></tr>`;
+        });
+        el.predictionBody.innerHTML = html;
+    }
+
+    /*=============================================
+     * LOOPS & FPS
+     *=============================================*/
+    // FPS計測用
+    let fpsFrames = 0;
+    let lastFpsTime = performance.now();
+
+    // アニメーションループ (バー更新、FPS更新)
+    function animLoop(now) {
+        // コンボバー更新
+        if (state.lastClickTime > 0) {
+            const elapsed = Date.now() - state.lastClickTime;
+            const remain = Math.max(0, COMBO_TIMEOUT - elapsed);
+            const percent = (remain / COMBO_TIMEOUT) * 100;
+            el.timerBar.style.width = `${percent}%`;
+
+            if (remain <= 0 && state.combo > 0) {
+                // コンボ切れ処理（ただしクリック時にリセットされるので表示上のリセットのみ）
+                // 実際のcomboリセットは次回のクリック時に行われるが、見た目は0にしておく
+                // ここではあえて放置し、次回クリック時にリセットさせる
+            }
         } else {
-            els.comboText.classList.remove('active');
+            el.timerBar.style.width = '0%';
         }
 
-        // 手動クリック時のみのエフェクト（自動時は重くなるので視覚エフェクトだけ少し間引くか、シンプルにする）
-        if (!isAuto || Math.random() < 0.1) { // 1000CPSで全描画はブラウザが死ぬため、自動時は10%だけ描画
-            createParticle();
+        // FPS計算
+        fpsFrames++;
+        if (now - lastFpsTime >= 1000) {
+            el.fps.textContent = `FPS: ${fpsFrames}`;
+            fpsFrames = 0;
+            lastFpsTime = now;
         }
 
-        if(!isAuto) {
-             els.btn.style.transform = "scale(0.95)";
-             setTimeout(() => els.btn.style.transform = "scale(1)", 50);
-        }
+        requestAnimationFrame(animLoop);
     }
+    requestAnimationFrame(animLoop);
 
-    // 画面上のエフェクト
-    function createParticle() {
-        const particle = document.createElement('div');
-        particle.textContent = "+1";
-        particle.className = 'particle';
-        
-        // ボタン周辺のランダムな位置
-        const rect = els.btn.getBoundingClientRect();
-        const containerRect = document.querySelector('.game-container').getBoundingClientRect();
-        
-        const x = (rect.left - containerRect.left) + rect.width / 2 + (Math.random() - 0.5) * 100;
-        const y = (rect.top - containerRect.top) + (Math.random() - 0.5) * 50;
-        
-        particle.style.left = `${x}px`;
-        particle.style.top = `${y}px`;
-
-        document.querySelector('.game-container').appendChild(particle);
-
-        // アニメーション終了後に削除
-        setTimeout(() => particle.remove(), 800);
-    }
-
-    /**
-     * CPS計算ループ (描画更新用)
-     */
+    // データ更新ループ (1ms)
     setInterval(() => {
         const now = Date.now();
-        // 1秒以内のクリックのみ残す
-        state.clicksInLastSecond = state.clicksInLastSecond.filter(t => now - t <= 1000);
-        
-        state.cps = state.clicksInLastSecond.length;
+        state.clicksBuffer = state.clicksBuffer.filter(t => now - t <= 1000);
+        state.cps = state.clicksBuffer.length;
         if (state.cps > state.maxCps) state.maxCps = state.cps;
 
-        els.cps.textContent = state.cps;
-        els.maxCps.textContent = state.maxCps;
-    }, 100);
+        // 予測用にCPSを保持
+        if (state.cps > 0) state.lastActiveCps = state.cps;
 
-    /**
-     * 自動連打ロジック
-     * 1000CPSを実現するため、setIntervalではなく、時間差分を用いたループ処理を行う。
-     * 「過負荷軽減なし」＝ 計算上必要な回数分、必ず音とカウントを回す。
-     */
-    let autoLoopId;
-    let lastAutoTime = 0;
-    let accumulatedTime = 0;
+        el.cps.textContent = state.cps;
+        el.maxCps.textContent = state.maxCps;
 
-    function autoClapLoop(timestamp) {
+        updatePrediction();
+    }, 1);
+
+    // 自動連打ループ
+    let lastAutoFrame = 0;
+    let accAutoTime = 0;
+    let autoId;
+
+    function autoLoop(ts) {
         if (!state.autoEnabled) return;
+        if (!lastAutoFrame) lastAutoFrame = ts;
+        const dt = ts - lastAutoFrame;
+        lastAutoFrame = ts;
 
-        if (!lastAutoTime) lastAutoTime = timestamp;
-        const deltaTime = timestamp - lastAutoTime;
-        lastAutoTime = timestamp;
-
-        // 1回あたりの間隔 (ms)
-        // 例: 1000CPS -> 1ms, 10CPS -> 100ms
         const interval = 1000 / state.autoCps;
+        accAutoTime += dt;
 
-        accumulatedTime += deltaTime;
-
-        // 蓄積された時間分だけクラップを実行（これが1000CPSの音を正しく出す肝）
-        // ブラウザのフレームレートが落ちても、論理的な回数は担保される
-        let countsToProcess = 0;
-        while (accumulatedTime >= interval) {
-            countsToProcess++;
-            accumulatedTime -= interval;
-        }
-
-        // ループ内でDOMを1000回叩くとブラウザがフリーズするため、
-        // 音はループで鳴らすが、DOM更新はまとめて行う等の工夫が必要だが、
-        // 「過負荷軽減なし」という要望のため、音に関してはループで全てトリガーを試みる。
-        
-        // 安全策: 1フレームにあまりに大量（例: ラグで1万回分溜まった）の場合はキャップを設けないとクラッシュするが、
-        // 要望通り制限なしで実装する。ただしAudioContextのリミットには当たる可能性がある。
-        
-        for (let i = 0; i < countsToProcess; i++) {
-            // ここでplayClapSoundを呼ぶ。
-            // AudioContextは高精度タイマーでスケジューリング可能だが、
-            // ここでは簡易的に即時再生を連続で呼ぶ。
+        let count = 0;
+        while (accAutoTime >= interval) {
             triggerClap(true);
+            accAutoTime -= interval;
+            count++;
         }
-
-        autoLoopId = requestAnimationFrame(autoClapLoop);
+        autoId = requestAnimationFrame(autoLoop);
     }
 
-    function toggleAuto(enabled) {
-        state.autoEnabled = enabled;
-        if (enabled) {
-            if (!state.audioContext) initAudio();
-            els.btn.classList.add('auto-active');
-            lastAutoTime = 0;
-            accumulatedTime = 0;
-            autoLoopId = requestAnimationFrame(autoClapLoop);
+    /*=============================================
+     * EVENTS
+     *=============================================*/
+    el.btn.addEventListener('mousedown', (e) => {
+        if(e.button === 0) triggerClap(false);
+    });
+    el.btn.addEventListener('touchstart', (e) => {
+        e.preventDefault(); triggerClap(false);
+    }, {passive:false});
+
+    el.autoToggle.addEventListener('change', (e) => {
+        state.autoEnabled = e.target.checked;
+        if (state.autoEnabled) {
+            initAudio();
+            el.btn.classList.add('auto-mode');
+            lastAutoFrame = 0; accAutoTime = 0;
+            autoId = requestAnimationFrame(autoLoop);
         } else {
-            els.btn.classList.remove('auto-active');
-            cancelAnimationFrame(autoLoopId);
+            el.btn.classList.remove('auto-mode');
+            cancelAnimationFrame(autoId);
+            state.lastClickTime = Date.now(); // 自動を切った瞬間からタイマー開始
         }
-    }
-
-    /**
-     * イベントリスナー
-     */
-    els.btn.addEventListener('mousedown', (e) => {
-        // マウスダウンでも発火（連打しやすいように）
-        triggerClap();
-    });
-    // タッチ対応
-    els.btn.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // ダブルタップズーム防止
-        triggerClap();
-    }, {passive: false});
-
-    els.autoToggle.addEventListener('change', (e) => {
-        toggleAuto(e.target.checked);
     });
 
-    els.slider.addEventListener('input', (e) => {
+    el.slider.addEventListener('input', (e) => {
         state.autoCps = parseInt(e.target.value);
-        els.sliderVal.textContent = `${state.autoCps} CPS`;
+        el.sliderVal.textContent = `${state.autoCps} CPS`;
     });
+
+    // 初期化
+    highlightBonusRow(0);
+    updatePrediction();
 
 </script>
 </body>
