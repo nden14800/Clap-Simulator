@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clap Simulator Ultimate</title>
+    <title>Clap Simulator Ultimate Real</title>
     <!-- Google Fonts: M PLUS Rounded 1c -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -355,7 +355,7 @@
         combo: 0,
         cps: 0,
         maxCps: 0,
-        lastActiveCps: 0, // 計算用：0になる前の最後のCPSを保持
+        lastActiveCps: 0, 
         lastClickTime: 0,
         clicksBuffer: [], 
         
@@ -367,49 +367,70 @@
     };
 
     /*=============================================
-     * AUDIO (Real Clap)
+     * AUDIO (Real Clap - High Quality)
      *=============================================*/
     function initAudio() {
         if (!state.audioCtx) {
-            state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const bufferSize = state.audioCtx.sampleRate * 2;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            state.audioCtx = new AudioContext();
+            
+            // ノイズバッファの生成 (ホワイトノイズ)
+            const bufferSize = state.audioCtx.sampleRate * 2; // 2秒分確保
             const buffer = state.audioCtx.createBuffer(1, bufferSize, state.audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
             state.noiseBuffer = buffer;
         }
-        if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+        if (state.audioCtx.state === 'suspended') {
+            state.audioCtx.resume();
+        }
     }
 
     function playRealClap() {
         if (!state.audioCtx) return;
         const t = state.audioCtx.currentTime;
-        
+
+        // ノイズソース作成
         const source = state.audioCtx.createBufferSource();
         source.buffer = state.noiseBuffer;
 
+        // 【音作り】よりリアルな拍手に近づけるフィルター設定
+        // 中心周波数を1000Hz〜1200Hz付近にし、少しランダム性を持たせて「生感」を出す
         const bandpass = state.audioCtx.createBiquadFilter();
         bandpass.type = "bandpass";
-        bandpass.frequency.value = 800 + Math.random() * 400; 
-        bandpass.Q.value = 1.0; 
+        bandpass.frequency.value = 1100 + (Math.random() * 300 - 150); // 950Hz - 1250Hzのゆらぎ
+        bandpass.Q.value = 0.8; // 帯域を少し広めにとって空気感を出す
 
+        // 不要な低音をカットして「ペチッ」という皮の音を強調
         const highpass = state.audioCtx.createBiquadFilter();
         highpass.type = "highpass";
-        highpass.frequency.value = 600;
+        highpass.frequency.value = 500;
 
+        // 高域を少し削って耳触りを良くする
+        const lowpass = state.audioCtx.createBiquadFilter();
+        lowpass.type = "lowpass";
+        lowpass.frequency.value = 5000;
+
+        // エンベロープ（音量変化）
         const gainNode = state.audioCtx.createGain();
         gainNode.gain.setValueAtTime(0, t);
-        gainNode.gain.linearRampToValueAtTime(1.0, t + 0.001);
-        const decay = 0.05 + Math.random() * 0.05;
-        gainNode.gain.exponentialRampToValueAtTime(0.01, t + decay);
+        // アタックを鋭く
+        gainNode.gain.linearRampToValueAtTime(1.0, t + 0.002); 
+        // 減衰を自然に（少し長めの余韻を持たせつつ急激に下がる）
+        gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
 
+        // 接続
         source.connect(bandpass);
         bandpass.connect(highpass);
-        highpass.connect(gainNode);
+        highpass.connect(lowpass);
+        lowpass.connect(gainNode);
         gainNode.connect(state.audioCtx.destination);
 
+        // 再生と停止
         source.start(t);
-        source.stop(t + decay + 0.05);
+        source.stop(t + 0.15);
     }
 
     /*=============================================
@@ -491,7 +512,7 @@
         highlightBonusRow(state.combo);
         updateUI(mul, add);
         
-        // エフェクト生成: 自動モード時は間引く
+        // エフェクト生成
         spawnParticle(add, isAuto);
 
         if (!isAuto) {
@@ -514,8 +535,8 @@
     }
 
     function spawnParticle(val, isAuto) {
-        // 自動モードの場合、90%の確率で生成をスキップ（軽量化）
-        if (isAuto && Math.random() > 0.1) return;
+        // 自動モードの場合、80%の確率で生成をスキップ (20%の確率で表示)
+        if (isAuto && Math.random() > 0.2) return;
 
         const p = document.createElement('div');
         p.className = 'particle';
@@ -604,8 +625,6 @@
 
             if (remain <= 0 && state.combo > 0) {
                 // コンボ切れ処理（ただしクリック時にリセットされるので表示上のリセットのみ）
-                // 実際のcomboリセットは次回のクリック時に行われるが、見た目は0にしておく
-                // ここではあえて放置し、次回クリック時にリセットさせる
             }
         } else {
             el.timerBar.style.width = '0%';
